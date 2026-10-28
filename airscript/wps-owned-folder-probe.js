@@ -3,26 +3,35 @@
 // 验证：如果共享文件夹的所有者是你，脚本能不能列出里面的文件。
 // 拿你自己建的「永诚壹【深圳】」来试，结果成立的话，再把「叶丹如」转回给你。
 //
-// 用法：在浏览器打开「永诚壹【深圳】」文件夹，复制地址栏网址填到 OWNED_FOLDER_URL
+// 上次用加密 fileId 拼 mine/ 链接报「invalid int: Parentid」，说明目录链接要的是数字 id。
+// 数字 id 在文件夹网址里，所以这次必须填 FOLDER_URL。
+//
+// 用法：
+//   1. 在浏览器打开「永诚壹【深圳】」文件夹，复制地址栏网址填到 FOLDER_URL
+//   2. 运行。「权限被拒绝」会让脚本直接停下，日志最后一行「试 N」就是失败的那种
+//   3. 把 START 改成 N+1 再运行，直到出现 ✅ 或全部试完
 
-const OWNED_FOLDER_URL = ''
-const FOLDER_NAME = '永诚壹【深圳】'
+const FOLDER_URL = ''
+const START = 1
 
-function tryList(label, dirUrl) {
-  try {
-    const list = KSDrive.listFiles({ dirUrl, count: 30 })
-    console.log('✅ ' + label + '：' + list.files.length + ' 个：' + list.files.map(f => f.fileName).join('、'))
-    return true
-  } catch (e) {
-    console.log('❌ ' + label + '：' + e)
-    return false
-  }
+const m = FOLDER_URL.match(/\/team\/(\d+)/)
+const groupId = m ? m[1] : ''
+const q = FOLDER_URL.match(/folderid=(-?\d+)/)
+const folderId = q ? q[1] : ''
+console.log('团队 id：' + groupId + '，文件夹 id：' + folderId)
+
+const candidates = [
+  FOLDER_URL,
+  folderId && 'https://www.kdocs.cn/mine/' + folderId,
+  folderId && 'https://www.kdocs.cn/mine/' + folderId.replace('-', ''),
+  groupId && 'https://www.kdocs.cn/team/' + groupId
+]
+
+for (let i = START - 1; i < candidates.length; i++) {
+  const url = candidates[i]
+  if (!url) continue
+  console.log('试 ' + (i + 1) + '：' + url)
+  const list = KSDrive.listFiles({ dirUrl: url, count: 30 })
+  console.log('✅ 第 ' + (i + 1) + ' 种可以：' + list.files.length + ' 个：' + list.files.map(f => f.fileName).join('、'))
+  break
 }
-
-// 只翻第一页根目录，找到文件夹的 fileId
-const root = KSDrive.listFiles({ count: 100 })
-const folder = root.files.find(f => f.fileName === FOLDER_NAME)
-console.log(folder ? '根目录里找到：' + JSON.stringify(folder) : '⚠️ 根目录第一页没找到' + FOLDER_NAME)
-
-if (folder) tryList('mine/fileId', 'https://www.kdocs.cn/mine/' + folder.fileId)
-if (OWNED_FOLDER_URL) tryList('地址栏网址', OWNED_FOLDER_URL)
